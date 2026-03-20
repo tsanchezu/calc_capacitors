@@ -146,12 +146,12 @@ def main():
         st.pyplot(fig)
 
         # Generar PDF
-        datos_pdf = {
+        datos = {
             'p_kw': p_kw, 'fp_act': fp_act, 'fp_obj': fp_obj, 
             'qc': res['qc'], 'ahorro_mes': res['ahorro_mes'], 
             'ahorro_anual': res['ahorro_anual'], 'roi': res['roi']
         }
-        pdf_file = generar_pdf(datos, firma_nombre)
+        pdf_file = generar_pdf(datos, firma)
 
         st.download_button(
             label="📥 Descargar Reporte Formal PDF",
@@ -162,5 +162,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
     
