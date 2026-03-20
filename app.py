@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader  # <--- NUEVA: Para leer el logo
 import io
 
 # --- 1. LÓGICA DE INGENIERÍA ---
@@ -29,51 +30,78 @@ def realizar_calculos(p_kw, fp_act, fp_obj, multa, inversion, costo_kwh):
     }
 
 # --- 2. GENERADOR DE PDF PROFESIONAL ---
-def generar_pdf_buffer(datos, firma_nombre):
+def generar_pdf(datos, firma_nombre):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
     
-    # Encabezado Corporativo
+    # --- ENCABEZADO Y LOGOTIPO ---
     c.setFillColor(colors.darkblue)
     c.rect(0, height-100, width, 100, fill=True, stroke=False)
     
+    # Lógica del Logotipo
+    try:
+        # Busca el archivo logo.png en la misma carpeta de GitHub
+        logo = ImageReader('logo.png') 
+        # Posición: x=50, y=height-85. Tamaño: 60x60 píxeles.
+        c.drawImage(logo, 50, height-85, width=65, height=65, mask='auto', preserveAspectRatio=True)
+        text_x = 135 # Desplaza el texto a la derecha para dejar espacio al logo
+    except Exception as e:
+        # Si falla el logo, el texto empieza desde la izquierda original
+        text_x = 50
+        print(f"Error cargando logo: {e}")
+
+    # Texto Corporativo
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 24)
-    c.drawString(50, height-60, "Dynamis Renewables")
-    c.setFont("Helvetica", 12)
-    c.drawString(50, height-80, "Soluciones de Eficiencia Energética y Potencia")
+    c.drawString(text_x, height-55, "Dynamis Renewables")
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawString(text_x, height-75, "ENERGY EFFICIENCY & POWER CONSULTING")
     
-    # Cuerpo del Reporte
+    # --- CUERPO DEL INFORME ---
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 16)
     y = height - 150
-    c.drawString(50, y, "REPORTE TÉCNICO DE COMPENSACIÓN")
+    c.drawString(50, y, "REPORTE TÉCNICO DE COMPENSACIÓN REACTIVA")
     
-    c.setFont("Helvetica", 12)
-    y -= 30
-    lineas = [
-        f"Potencia Activa Analizada: {datos['p_kw']} kW",
-        f"Factor de Potencia (Actual -> Objetivo): {datos['fp_act']} -> {datos['fp_obj']}",
-        f"Capacidad del Banco Requerida: {datos['qc']:.2f} kVAR",
-        f"Ahorro Mensual Proyectado: ${datos['ahorro_mes']:.2f}",
-        f"Ahorro Anual Estimado: ${datos['ahorro_anual']:.2f}",
-        f"Retorno de Inversión (ROI): {datos['roi']:.1f} meses"
+    # Tabla de Datos (Diseño profesional con alineación)
+    c.setFont("Helvetica", 11)
+    y -= 40
+    tabla_datos = [
+        ["PARÁMETRO ELÉCTRICO", "VALOR"],
+        ["Demanda Activa (P)", f"{datos['p_kw']} kW"],
+        ["Factor de Potencia", f"{datos['fp_act']} --> {datos['fp_obj']}"],
+        ["Reactiva Inicial (Q1)", f"{datos['q_act']:.1f} kVAR"],
+        ["Reactiva Final (Q2)", f"{datos['q_obj']:.1f} kVAR"],
+        ["CAPACIDAD BANCO (Qc)", f"{datos['qc']:.2f} kVAR"],
+        ["CAPACITANCIA TOTAL", f"{datos['uf']:.1f} µF"],
+        ["CAPACIDAD LIBERADA", f"{datos['kva_liberados']:.1f} kVA"],
+        ["AHORRO MENSUAL ESTIMADO", f"${datos['ahorro_mes']:.2f}"],
+        ["RETORNO DE INVERSIÓN", f"{datos['roi']:.1f} Meses"]
     ]
-    for linea in lineas:
+    
+    for fila in tabla_datos:
+        c.drawString(70, y, fila[0])
+        c.drawRightString(width-100, y, fila[1])
+        c.setStrokeColor(colors.lightgrey)
+        c.line(70, y-4, width-100, y-4)
         y -= 25
-        c.drawString(70, y, f"• {linea}")
-
-    # Sección de Firma
-    y -= 100
+    
+    # --- FIRMA DEL CONSULTOR ---
+    y -= 60
     c.setStrokeColor(colors.black)
-    c.line(50, y, 250, y) # Línea de firma
-    y -= 20
+    c.line(50, y, 230, y)
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, firma_nombre)
-    c.setFont("Helvetica-Oblique", 10)
-    c.drawString(50, y-15, "Consultor Energético")
-    c.drawString(50, y-30, "Dynamis Renewables")
+    c.drawString(50, y-18, firma_nombre)
+    c.setFont("Helvetica", 10)
+    c.drawString(50, y-32, "Consultor Especialista")
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(50, y-46, "Dynamis Renewables")
+    
+    # Pie de página
+    c.setFont("Helvetica-Oblique", 8)
+    c.setFillColor(colors.grey)
+    c.drawCentredString(width/2, 30, "Documento generado por Dynamis Renewables - Eficiencia que Impulsa el Futuro")
 
     c.showPage()
     c.save()
@@ -123,7 +151,7 @@ def main():
             'qc': res['qc'], 'ahorro_mes': res['ahorro_mes'], 
             'ahorro_anual': res['ahorro_anual'], 'roi': res['roi']
         }
-        pdf_file = generar_pdf_buffer(datos_pdf, firma)
+        pdf_file = generar_pdf(datos, firma_nombre)
 
         st.download_button(
             label="📥 Descargar Reporte Formal PDF",
@@ -134,3 +162,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
